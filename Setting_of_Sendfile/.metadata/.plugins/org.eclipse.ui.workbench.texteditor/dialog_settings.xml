@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="selection" value=""/>
+		<item key="wrap" value="true"/>
+		<item key="casesensitive" value="false"/>
+		<item key="wholeword" value="false"/>
+		<item key="incremental" value="false"/>
+		<item key="isRegEx" value="false"/>
+		<list key="findhistory">
+			<item value="bat"/>
+			<item value="write"/>
+			<item value="日"/>
+			<item value="每日"/>
+			<item value="每日日"/>
+			<item value="day_of_week"/>
+			<item value="weekly"/>
+			<item value="星期"/>
+			<item value="password"/>
+			<item value="DAY_OF_WEEK"/>
+			<item value="每週"/>
+			<item value="日期"/>
+			<item value="day_of_month"/>
+			<item value="分鐘"/>
+			<item value="小時"/>
+		</list>
+		<list key="replacehistory">
+			<item value="weekly"/>
+			<item value=""/>
+			<item value="day_of_week"/>
+			<item value="day_of_month"/>
+			<item value="minute"/>
+			<item value="hour"/>
+			<item value="monthly"/>
+			<item value="daily"/>
+			<item value="date_of_w"/>
+			<item value="date_of_month"/>
+			<item value="windows"/>
+		</list>
+	</section>
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog_dialogBounds">
+		<item key="DIALOG_X_ORIGIN" value="147"/>
+		<item key="DIALOG_Y_ORIGIN" value="153"/>
+		<item key="DIALOG_WIDTH" value="377"/>
+		<item key="DIALOG_HEIGHT" value="424"/>
+		<item key="DIALOG_FONT_NAME" value="1|Microsoft JhengHei UI|9.0|0|WINDOWS|1|-12|0|0|0|400|0|0|0|1|0|0|0|0|Microsoft JhengHei UI"/>
+	</section>
+</section>

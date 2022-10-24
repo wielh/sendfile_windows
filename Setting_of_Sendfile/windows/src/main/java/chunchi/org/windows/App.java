@@ -1,0 +1,756 @@
+package chunchi.org.windows;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+
+import org.json.simple.JSONObject;
+
+import chunchi.org.windows.All_UI.Login_UI;
+import chunchi.org.windows.BackEnd.EditTask;
+import chunchi.org.windows.BackEnd.Utils;
+
+/**
+ * Hello world!
+ *
+ */
+public class App {
+    public static void main(String[] args){    	
+    	if(args.length==0) {
+    		new Login_UI();   		
+    		return;
+    	} else if(args[0].equals("--help")) {
+    		show_info();
+    	} else {
+    		JSONObject parameters;
+        	try {
+        		parameters = get_parameter_from_args(args);
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    			return;
+    		}	
+            // ==============================================================
+            // Part2 login
+        	Connection conn;
+        	Statement stmt;
+        	String stmt_string="";
+        	
+        	try {
+    			conn = Utils.connect_to_database();
+    			stmt = conn.createStatement();
+    			System.out.println("connect to database success");		
+    		} catch (Exception e1) {
+    			System.out.println("Unable to connect to database");
+    			e1.printStackTrace();			
+    			return;
+    		}
+    									
+			if(parameters.get("database_username")==null) {
+				System.out.println("Please input database username");
+				return;
+			} 
+			
+			stmt_string = String.format(
+				"select count(*) from login where username='%s';"
+				,parameters.get("database_username"));
+    			  				
+    	   // ==============================================================
+           // Part3 execute
+    		
+           String mode = (String) parameters.get("mode");
+           if( mode.equals("schedule")) {
+        	   int next_n_day=1;
+        	   try {
+        		  next_n_day = Integer.valueOf((String) parameters.get("next_n_day")); 
+        	   } catch (Exception e) {
+    				System.out.println("The input of schedule is not a number");
+    				try {
+        			   stmt.close();
+        			   conn.close();
+        		    } catch (SQLException e1) {
+    					e1.printStackTrace();
+    					return;
+        		    }
+    				return;
+        	   }
+        	   
+        	   try {
+        		   show_schedule(stmt, next_n_day, 
+    					   (String)parameters.get("database_username"), 
+    					   (String)parameters.get("csv_path"));
+        	   } catch (Exception e) {
+        		   System.out.println("some error happens when we try to get schedule");
+        		   e.printStackTrace();		   
+        		   try {
+        			   stmt.close();
+        			   conn.close();
+        			   return;
+        		   } catch (SQLException e1) {
+    					e1.printStackTrace();
+        		   }
+        		   return;
+        	   }	   
+           } else if(mode.equals("create")) {    	   
+        	   if(parameters.get("task_name")==null) {
+        		   System.out.println("task name is null");
+        		   return;
+        	   }
+        	   
+        	   stmt_string = String.format(
+    					"SELECT count(*) FROM tasks "+ 
+    					"WHERE username = '%s' and task_name = '%s'",
+    			    	 parameters.get("database_username"), parameters.get("task_name"));	
+        	   
+        	    ResultSet rs;
+    			try {
+    				rs = stmt.executeQuery(stmt_string);
+    				if(rs.next() && rs.getInt(1)>0) {		
+    					System.out.printf("The task name %s has been used.",parameters.get("task_name"));
+    					rs.close();
+    					stmt.close();
+    					conn.close();
+    					return;
+    				}
+    			} catch (SQLException e) {
+    				System.out.println("some error happens when we search task form database.");
+    				e.printStackTrace();			
+    				try {
+    	    			   stmt.close();
+    	    			   conn.close();
+    	    		    } catch (SQLException e1) {
+    						e1.printStackTrace();
+    						return;
+    	    		    }
+    					return;
+    			}	
+    			
+    			String info = Utils.check_format(parameters);
+    			if(!info.equals("")) {
+    				System.out.println("The format of input is incorrect");
+    				System.out.println("reason:"+info);
+    				return;
+    			} else {	
+    				System.out.println("start to create a new task");
+    				if(parameters.get("execute_timing").equals("now")) {
+    					EditTask.create_task_and_execute_now(parameters,false);
+    				} else if(
+    						parameters.get("period").equals("每月")||
+    						parameters.get("period").equals("每週")||
+    						parameters.get("period").equals("每日")
+    				){
+    					EditTask.create_task_periodical(parameters,false);				
+    				} else {
+    					System.out.println("The input: "+ parameters.get("execute_timing") +" of flag execute_timing is incorrect.");
+    				}
+    			}
+    			
+           } else if(mode.equals("modify")) {   	   
+        	   if(parameters.get("task_name")==null) {
+        		   System.out.println("task name is null");
+        		   return;
+        	   }
+        	   
+        	   stmt_string = String.format(
+    					"SELECT count(*) FROM tasks "+ 
+    					"WHERE username = '%s' and task_name = '%s'",
+    			    	 parameters.get("database_username"), parameters.get("task_name"));	
+        	   ResultSet rs;
+        	   
+    		   try {			   
+    			    rs = stmt.executeQuery(stmt_string);
+    				if(rs.next() && rs.getInt(1)>0) {	
+    					stmt_string =  String.format("SELECT * FROM tasks "+ 
+    					"WHERE username='%s' and task_name = '%s'",
+    					parameters.get("database_username"), parameters.get("task_name"));	
+    					rs = stmt.executeQuery(stmt_string);
+    					if(rs.next()) {
+    						parameters = get_parameter_from_database(parameters, rs);
+    					}
+    				} else {
+    					System.out.printf("Cannot find task %s in database",parameters.get("task_name"));
+    					rs.close();
+    					stmt.close();
+    					conn.close();
+    					return;
+    				}
+    		   } catch (SQLException e) {
+    			  System.out.println("some error happens when we search task form database.");
+    			  e.printStackTrace();
+    			  try {
+       			   	stmt.close();
+       			   	conn.close();
+       		      } catch (SQLException e1) {
+    					e1.printStackTrace();
+    					return;
+       		      }
+    			  return;
+    		   }	
+    		   
+    		    String info = Utils.check_format(parameters);
+    			if(!info.equals("")) {
+    				 System.out.println("The format of input is incorrect");
+    				 System.out.println("reason:"+info);
+    				 System.out.println("======================");
+    				 System.out.println("All data in parameters");
+    				 for(Object key:parameters.keySet()) {
+    					 System.out.println(key+":"+parameters.get(key));
+    				 }
+    				 System.out.println("======================");
+    				 try {
+    	    		    stmt.close();
+    	    			conn.close();
+    	    		 } catch (SQLException e1) {
+    						e1.printStackTrace();
+    						return;
+    	    		 }
+    					return;
+    			} else {	
+    				System.out.println("start to create a new task");
+    				if(parameters.get("execute_timing").equals("now")) {
+    					EditTask.modify_task_and_execute_now(parameters,false);
+    				} else if(
+    					parameters.get("period").equals("每月")||
+    					parameters.get("period").equals("每週")||
+    					parameters.get("period").equals("每日")){
+    					EditTask.modify_task_periodical(parameters,false);				
+    				} else {
+    					System.out.println("The input:"+ parameters.get("execute_timing") +" of flag execute_timing is incorrect.");
+    				}
+    			}
+    		   	       	   
+           } else if(mode.equals("delete")) {
+        	   System.out.println("start to delete a new task");
+        	   if(parameters.get("execute_timing").equals("now")) {
+        		   EditTask.delete_once_task(parameters,true);
+				} else if(
+					parameters.get("period").equals("每月")||
+					parameters.get("period").equals("每週")||
+					parameters.get("period").equals("每日")){
+					EditTask.delete_periodical_task(parameters,true);				
+				} else {
+					System.out.println("The input:"+ parameters.get("execute_timing") +" of flag execute_timing is incorrect.");
+				}
+        	   
+        	   try {
+    			   stmt.close();
+    			   conn.close();
+    		    } catch (SQLException e1) {
+    				e1.printStackTrace();
+    				return;
+    		    }
+    			return;
+           } else {
+        	   System.out.println(String.format("Unknown mode %s", mode));
+        	   try {
+    			   stmt.close();
+    			   conn.close();
+    		   } catch (SQLException e1) {
+    				e1.printStackTrace();
+    				return;
+    		   }
+    		   return;
+           }      
+		}
+    }
+    
+    public static void show_info() {
+    	
+    	// Note 1.on ubuntu 2. have sudo privilege
+        // flag: -u 	--username	{...}
+        //	        	--help
+        //				--text {...}
+        //				--schedule  {number}
+        //				--create --modify --delete {...}
+        //		    	--move --copy
+        //				--now --daily --weekly --monthly
+        //				subflag: --minute --hour --weekday --day 
+        //				--timeout {hour}
+        //				--source/target_connection_way   option = {}
+        //				--source/target_ip
+        //				--source/target_username
+        //				--source/target_password
+        //				--source/target_mount_folder
+        //				--folder_to_be_copied
+    	System.out.println("This program help you sending file periodcially");
+    	System.out.println("Part1: Show all flags");
+    	System.out.println("We will show all flags below:");
+    	System.out.println("-u or --username {string}: username of database");
+    	System.out.println("--schedule {number} {csv_path}: show the tasks will run in next {number} days in {csv_path}");
+    	System.out.println("--create {task_name}: create a new task called {task_name}");
+    	System.out.println("--modify {task_name}: modify an exist task called {task_name}");
+    	System.out.println("--delete {task_name}: delete an exist task called {task_name}");
+    	System.out.println(" you can only choose one of --create,--modify and --delete");
+    	System.out.println("--move: set the task is to move file/folder");
+    	System.out.println("--copy: set the task is to copy file/folder");
+    	System.out.println(" you can only choose one of --move and --copy");
+    	System.out.println("--now: execute the task now and once");
+    	System.out.println("--daily: execute the task every day");
+    	System.out.println("--weekly: execute the task every week");
+    	System.out.println("--monthly: execute the task every month");
+    	System.out.println(" you can only choose one of --now, --daily, --weekly and --monthly");
+    	System.out.println(" -d {n}: the nth day of a month");
+    	System.out.println(" -w {n}: the nth day of a week(0~6)");
+    	System.out.println(" -h {n}: the nth hour of a day(0~23)");
+    	System.out.println(" -m {n}: the nth minute of a hour(0~59)");
+    	System.out.println(" --timeout {n}: If the task is not completed after n hour,then stop it immediately.");
+    	System.out.println("Note: source is the location of file, and source is the location the file move/copy to");
+    	
+    	System.out.println(" --source_connection_way: the way you choose to connect to remote server. option={cifs,nfs,localhost}");
+    	System.out.println(" --source_ip: the ip of source server, cifs and nfs required");
+    	System.out.println(" --source_username: the username of login to source server, cifs required");
+    	System.out.println(" --source_password: the password of login to source server, cifs required");
+    	System.out.println(" --source_folder: the folder of source server you want to mount.");
+    	System.out.println(" --source_subfolder: the folder/file in source_folder you want to move/copy");
+    	
+    	System.out.println(" --target_connection_way: the way you choose to connect to remote server. option={cifs,nfs,localhost}");
+    	System.out.println(" --target_ip: the ip of target server, cifs and nfs required");
+    	System.out.println(" --target_username: the username of login to source server, cifs required");
+    	System.out.println(" --target_password: the password of login to source server, cifs required");
+    	System.out.println(" --target_folder: the folder of source server you want to mount.");
+    	
+    	System.out.println("\nPart2: Examples");
+    	System.out.println("Example1. If you want to get all tasks in next 60 days and write into csv, then you can type:\n"
+    			         + "   java -jar <jar location> -u <database_username> --schedule 60 <csv location>\n");
+    	System.out.println("Example2. If you want to create a new tasks call task1, which copy the folder CC$/abc on 172.23.59.15 to /home/bob/Desktop/xyz on localhost\n"
+    			+ "at 12:00, 5th day of every month, and the localhost can mount to 172.23.59.15/CC$ by cifs\n, "
+    			+ "then you can type a command as follow: \n"
+    			+ "    java -jar <jar location> -u <database_username> --create task1 --copy \\ \n"
+    			+ "    --monthly -d 5 -h 12 -m 0 --timeout 12 \\ \n"
+    			+ "    --source_connection_way nfs --source_ip 172.23.59.15 --source_username <...> --source_password <...> --source_folder CC$ --source_subfolder abc \\ \n"
+    			+ "    --target_connection_way localhost  --target_folder /home/bob/Desktop/xyz\n");
+    	System.out.println("Example3. If you want to create a new tasks call task1, which copy the folder wang/abc/def and wang/abc/ghi on 10.30.9.32\n"
+    			+ "to CC$ folder on 172.23.59.15 at 12:00 everyday, Moreover, the localhost can mount to 10.30.9.32/wang by nfs and 172.23.59.15/CC$ by cifs\n"
+    			+ "then you can type a command as follow: \n"
+    			+ "    java -jar <jar location> -u <database_username> --create task1 --copy \\ \n"
+    			+ "    --daily -h 12 -d 0 --timeout 12 \\ \n"
+    			+ "    --source_connection_way nfs --source_ip 10.30.9.32 --source_folder wang --source_subfolder abc/def;abc/ghi \\ \n"
+    			+ "    --target_connection_way cifs --target_ip 172.23.59.15 --target_username <...> --target_password <...> --target_folder CC$ \\ \n");
+    	System.out.println("Example4. If you want to create a new tasks call task1, which copy the folder wang/abc/def on 10.30.9.32 \n"
+    			+ "to CC$ on 172.23.59.15 at 12:00 everyday. Moreover, 10.30.9.32/wang has mount on /home/bob/Desktop/nfs and 172.23.59.15/CC$ has mount on /home/bob/Desktop/nfs \n"
+    			+ "then you can type a command as follow: \n"
+    			+ "    java -jar <jar location> -u <database_username> --create task1 --copy \\ \n"
+    			+ "    --daily -h 12 -d 0 --timeout 12 \\ \n"
+    			+ "    --source_connection_way localhost --source_folder /home/bob/Desktop/nfs/abc/def \\ \n"
+    			+ "    --target_connection_way localhost --target_folder /home/bob/Desktop/cifs\n");	
+    }
+
+	public static void show_schedule
+		(Statement stmt,int next_n_day,String database_username,String csv_path) throws Exception{
+	
+		String stmt_string;
+		ResultSet result;
+		FileWriter fw = new FileWriter(new File(csv_path));
+		try{
+			fw.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
+				"task_name","move_or_copy","execute_timing","remain_time",
+				"period","timeout", "日期","星期","小時","分鐘",
+				"source_connection_way","source_ip", "source_folder",
+				"folder_to_be_copied","target_connection_way",
+				"target_ip","target_folder"
+			)+"\n");
+	    	stmt_string = String.format
+					("select * from tasks where username='%s'",database_username);	
+			result = stmt.executeQuery(stmt_string);			
+			
+		    while (result.next()) {
+		    	String task_name = result.getString("task_name");
+		    	String mv_cp = result.getString("move_or_copy");
+		    	String execute_timing = result.getString("execute_timing");
+		    	String period = result.getString("period");
+		    	if(result.wasNull()){period="";}
+		    	String timeout = String.valueOf(result.getFloat("timeout"));
+		    	String 日期 = String.valueOf(result.getInt("日期"));
+		    	String 每週 = result.getString("星期");
+		    	String 小時 = String.valueOf(result.getInt("小時"));
+		    	String 分鐘 = String.valueOf(result.getInt("分鐘"));
+		    	String source_connection_way = result.getString("source_connection_way");
+		    	String source_ip = result.getString("source_ip");
+		    	if(result.wasNull()) {source_ip="";}
+		    	String source_folder = result.getString("source_folder");
+		    	if(result.wasNull()) {source_folder="";}
+		    	String source_subfolder = result.getString("source_subfolder");
+		    	if(result.wasNull()) { source_subfolder=""; }
+		    	String target_connection_way = result.getString("target_connection_way");
+		    	String target_ip = result.getString("target_ip");
+		    	if(result.wasNull()) {target_ip="";}
+		    	String target_folder = result.getString("target_folder");
+		    	if(result.wasNull()) {target_folder="";}
+		    	ArrayList<Long> next_time_list;
+		    	
+		    	if(result.getString("period").equals("每月")) {
+		    		next_time_list = Utils.get_next_starttime_monthly
+		    			(result.getInt("分鐘"), result.getInt("小時"), result.getInt("日期"), next_n_day);
+		    	} else if(result.getString("period").equals("每週")) {
+		    		next_time_list = Utils.get_next_starttime_weekly
+			    		(result.getInt("分鐘"), result.getInt("小時"), result.getString("星期"), next_n_day);
+		    	} else {
+		    		next_time_list = Utils.get_next_starttime_daily
+				    	(result.getInt("分鐘"), result.getInt("小時"), next_n_day);
+		    	}
+		    	
+	
+		    	for(long milli_second: next_time_list) {
+			    	fw.write(String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s", 
+			    			task_name,mv_cp,execute_timing,
+			    			Utils.Millisecond_to_String(milli_second).replace(",", ":"),
+			    			period,timeout,日期,每週,小時,分鐘,
+			    			source_connection_way,source_ip, source_folder,
+			    			source_subfolder,target_connection_way,
+			    			target_ip,target_folder
+			    	)+"\n");
+		    	}
+			}	    	
+		    
+		    fw.flush();
+		    fw.close();
+		} catch (SQLException e1) {
+			fw.flush();
+			fw.close();
+			e1.printStackTrace();
+			return;
+		}
+	}
+  
+	@SuppressWarnings("unchecked")
+	public static JSONObject get_parameter_from_args(String[] args) throws Exception{  	
+		JSONObject parameters = new JSONObject();
+		parameters.put("force_umount", false);
+		
+		for(int i=0;i<args.length;i++) {
+			if(args[i].equals("-u")|| args[i].equals("--username")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag -u or --username");
+				} else {
+					parameters.put("database_username", args[i+1]);
+				}			 
+			} else if(args[i].equals("--schedule")){
+				parameters.put("mode", "schedule");
+				if(i==args.length-1) {
+					throw new Exception("no number after flag --schedule");
+				} else {
+					parameters.put("next_n_day", args[i+1]);
+				}	
+				
+				if(i==args.length-2) {
+					throw new Exception("no csv path after flag --schedule");
+				} else {
+					parameters.put("csv_path", args[i+2]);
+				}
+			} else if(args[i].equals("--create")) {
+				parameters.put("mode", "create");
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("task_name", args[i+1]);
+				}	
+			} else if ( args[i].equals("--modify")) {
+				parameters.put("mode", "modify");
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("task_name", args[i+1]);
+				}	
+			} else if(args[i].equals("--delete")) {
+				parameters.put("mode", "delete");
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("task_name", args[i+1]);
+				}
+			} else if(args[i].equals("--move")) {
+				parameters.put("move_or_copy", "move");
+			} else if(args[i].equals("--copy")) {
+				parameters.put("move_or_copy", "copy");		
+			} else if(args[i].equals("--now") ) {
+				parameters.put("execute_timing", "now");
+			} else if(args[i].equals("--force_umount")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else if(args[i+1].equals("true")){
+					parameters.put("force_umount", true);
+				} else {
+					parameters.put("force_umount", false);
+				}
+			} else if(args[i].equals("--monthly")) {
+				parameters.put("execute_timing", "periodical");
+				parameters.put("period", "每月");
+			} else if(args[i].equals("--weekly")) {
+				parameters.put("execute_timing", "periodical");
+				parameters.put("period", "每週");
+			} else if(args[i].equals("--daily")) {
+				parameters.put("execute_timing", "periodical");
+				parameters.put("period", "每日");
+			} else if(args[i].equals("-d")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("日期", args[i+1]);
+				}	
+			} else if(args[i].equals("-w")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					String weekday="";
+					switch (args[i+1]) {
+					case "0":
+						weekday="日";
+						break;
+					case "1":
+						weekday="一";
+						break;
+					case "2":
+						weekday="二";
+						break;
+					case "3":
+						weekday="三";
+						break;
+					case "4":
+						weekday="四";
+						break;
+					case "5":
+						weekday="五";
+						break;
+					case "6":
+						weekday="六";
+						break;
+					default:
+						throw new Exception("The weekday should be 0~6");
+					}
+					parameters.put("星期", weekday);
+				}	
+			} else if(args[i].equals("-h")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("小時", args[i+1]);
+				}
+			} else if(args[i].equals("-m")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("分鐘", args[i+1]);
+				}
+			} else if(args[i].equals("--timeout")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("timeout", args[i+1]);
+				}
+			} else if(args[i].equals("--source_connection_way")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					if (args[i+1].equals("cifs")) {
+						parameters.put("source_connection_way","temporary cifs connection");
+					} else if(args[i+1].equals("nfs")) {
+						parameters.put("source_connection_way","temporary nfs connection");
+					} else if(args[i+1].equals("localhost")) {
+						parameters.put("source_connection_way","localhost/connected remote");
+					} else {
+						parameters.put("source_connection_way",args[i+1]);
+					}
+				}
+			} else if(args[i].equals("--source_ip")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("source_ip",args[i+1]);
+				}
+			} else if(args[i].equals("--source_username")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("source_connection_username",args[i+1]);
+				}
+			} else if(args[i].equals("--source_password")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("encrypted_source_connection_password",
+							Utils.encrypted_by_AES(args[i+1]));
+				}
+			} else if(args[i].equals("--source_mount_disk")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("source_mount_disk",args[i+1]);
+				}
+			} else if(args[i].equals("--source_folder")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("source_folder",args[i+1]);
+				}
+			} else if(args[i].equals("--source_subfolder")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("source_subfolder",args[i+1]);
+				}		
+			} else if(args[i].equals("--target_connection_way")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					if (args[i+1].equals("cifs")) {
+						parameters.put("target_connection_way","temporary cifs connection");
+					} else if(args[i+1].equals("nfs")) {
+						parameters.put("target_connection_way","temporary nfs connection");
+					} else if(args[i+1].equals("localhost")) {
+						parameters.put("target_connection_way","localhost/connected remote");
+					} else {
+						parameters.put("target_connection_way",args[i+1]);
+					}
+				}
+			} else if(args[i].equals("--target_ip")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("target_ip",args[i+1]);
+				}
+			} else if(args[i].equals("--target_username")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("target_connection_username",args[i+1]);
+				}
+			} else if(args[i].equals("--target_password")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("encrypted_target_connection_password",
+							Utils.encrypted_by_AES(args[i+1]));
+				}
+			} else if(args[i].equals("--target_mount_disk")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("target_mount_disk",args[i+1]);
+				}
+			} else if(args[i].equals("--target_folder")) {
+				if(i==args.length-1) {
+					throw new Exception("no string after flag "+args[i]);
+				} else {
+					parameters.put("target_folder",args[i+1]);
+				}
+			}
+	     }
+		
+		 return parameters;
+	}  
+
+	@SuppressWarnings("unchecked")	
+	public static JSONObject get_parameter_from_database 
+		(JSONObject parameters, ResultSet rs) throws SQLException{
+			
+		if(!parameters.keySet().contains("move_or_copy")) {
+			parameters.put("move_or_copy",rs.getString("move_or_copy"));
+		} 
+		
+		if(!parameters.keySet().contains("execute_timing")) {
+			parameters.put("execute_timing", rs.getString("execute_timing"));
+		}
+		
+		if(!parameters.keySet().contains("period") && 
+			parameters.get("execute_timing").equals("periodical")) {
+			parameters.put("period", rs.getString("period"));
+		} 
+		
+		if(!parameters.keySet().contains("force_umount")) {
+			parameters.put("force_umount", "false");
+		} 
+			
+		if(!parameters.keySet().contains("日期")) {
+			int abc = rs.getInt("日期");
+			if(!rs.wasNull()) {
+				parameters.put("日期", String.valueOf(abc));
+			}	
+		} 
+		
+		if(!parameters.keySet().contains("星期")) {
+			String abc = rs.getString("星期");
+			if(!rs.wasNull()) {
+				parameters.put("星期", abc);
+			}	
+		} 
+		
+		if(!parameters.keySet().contains("小時")) {
+			int abc = rs.getInt("小時");
+			if(!rs.wasNull()) {
+				parameters.put("小時", String.valueOf(abc));
+			}	
+		}
+		
+		if(!parameters.keySet().contains("分鐘")) {
+			int abc = rs.getInt("分鐘");
+			if(!rs.wasNull()) {
+				parameters.put("分鐘", String.valueOf(abc));
+			}	
+		} 
+		
+		if(!parameters.keySet().contains("timeout")) {
+			double abc = rs.getDouble("timeout");
+			if(!rs.wasNull()) {
+				parameters.put("timeout",String.valueOf(abc));
+			}
+		} 
+		
+		if(!parameters.keySet().contains("source_connection_way")) {
+			parameters.put("source_connection_way", rs.getString("source_connection_way"));
+		} 
+		
+		if(!parameters.keySet().contains("source_ip")) {
+			parameters.put("source_ip", rs.getString("source_ip"));
+		}
+		
+		if(!parameters.keySet().contains("source_connection_username")) {
+			parameters.put("source_connection_username",rs.getString("source_connection_username"));
+		} 
+		
+		if(!parameters.keySet().contains("encrypted_source_connection_password")) {
+			parameters.put("encrypted_source_connection_password",rs.getString("encrypted_source_connection_password"));
+		} 
+		
+		if(!parameters.keySet().contains("source_mount_disk")) {
+			parameters.put("source_mount_disk",rs.getString("source_mount_disk"));
+		} 
+		
+		if(!parameters.keySet().contains("source_folder")) {
+			parameters.put("source_folder",rs.getString("source_folder"));
+		} 
+		
+		if(!parameters.keySet().contains("source_subfolder")) {
+			parameters.put("source_subfolder",rs.getString("source_subfolder"));
+		} 
+		
+		if(!parameters.keySet().contains("target_connection_way")) {
+			parameters.put("target_connection_way", rs.getString("target_connection_way"));
+		} 
+		
+		if(!parameters.keySet().contains("target_ip")) {
+			parameters.put("target_ip", rs.getString("target_ip"));
+		} 
+		
+		if(!parameters.keySet().contains("target_connection_username")) {
+			parameters.put("target_connection_username",rs.getString("target_connection_username"));
+		} 
+		
+		if(!parameters.keySet().contains("encrypted_target_connection_password")) {
+			parameters.put("encrypted_target_connection_password",rs.getString("encrypted_target_connection_password"));
+		} 
+		
+		if(!parameters.keySet().contains("target_mount_disk")) {
+			parameters.put("target_mount_disk",rs.getString("target_mount_disk"));
+		} 
+		
+		if(!parameters.keySet().contains("target_folder")) {
+			parameters.put("target_folder",rs.getString("target_folder"));
+		}
+	
+		return parameters;
+	}
+
+}

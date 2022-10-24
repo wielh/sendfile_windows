@@ -1,0 +1,987 @@
+package chunchi.org.windows.All_UI;
+
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.io.File;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JRadioButton;
+import javax.swing.JTextField;
+
+import org.json.simple.JSONObject;
+
+import chunchi.org.windows.App;
+import chunchi.org.windows.Config;
+import chunchi.org.windows.BackEnd.EditTask;
+import chunchi.org.windows.BackEnd.Utils;
+
+public class RemoteToRemote_Panel extends JPanel{
+	private static final long serialVersionUID = 1L;
+	 
+	// components in main UI 
+	JLabel edit_task_label;
+	JComboBox<String> edit_task_comboBox;
+	JLabel edit_mv_or_cp_label;
+	JComboBox<String> edit_mv_or_cp_combobox;
+	
+	String old_task_name = "";
+	JLabel new_task_name_label;
+	JTextField new_task_name_textfield;
+	JLabel exist_task_name_label;
+	JComboBox<String> exist_task_name_combobox;
+	
+	JLabel choose_execute_timeing_label;
+	JRadioButton now_button;
+	JRadioButton period_button;
+	ButtonGroup timing_group;
+	JCheckBox force_umount_box;
+	
+	JLabel time_setting_label;
+	JLabel period_label;
+	JComboBox<String> period_combobox;
+	JLabel date_label;
+	JTextField date_textfield;
+	JLabel weekday_label;
+	JComboBox<String> weekday_JComboBox;
+	JLabel start_hour_label;
+	JTextField start_hour_textfield;
+	JLabel start_minute_label;
+	JTextField start_minute_textfield;
+	JLabel execute_hour_label;
+	JTextField execute_hour_textfield; 		
+	//JPasswordField connect_password_textfield ;
+	
+	JLabel source_label;
+	JLabel dest_label;
+	JLabel ip_label;
+	JTextField source_ip_textfield ;
+	JTextField dest_ip_textfield;
+	JLabel connection_way_label;
+	JComboBox<String> source_connection_way_combobox;
+	JComboBox<String> dest_connection_way_combobox;
+	JLabel connection_username_label;
+	JTextField source_connection_username_textfield;
+	JTextField dest_connection_username_textfield;
+	JLabel connection_password_label;
+	JTextField source_connection_password_textfield;
+	JTextField dest_connection_password_textfield;
+	JLabel mount_disk_Label;
+	JTextField source_mount_disk_textfield;
+	JTextField dest_mount_disk_textfield;
+	JLabel folder_label;
+	JTextField source_folder_textfield;
+	JTextField dest_folder_textfield;
+	JLabel subfolder_label;
+	JTextField source_subfolder_textfield;
+	
+	JButton import_setting;	
+	JButton submit;
+	
+	GridBagConstraints c = new GridBagConstraints();
+	GridBagLayout layout = new GridBagLayout();
+	JPanel panel = this;
+	
+	All_UI aui;
+	Import_UI iui;
+	RemoteToRemote_Panel self;
+	
+	String database_username;
+	String database_password;
+	//=============================================
+	// JFileChooser source_folder_chooser = new JFileChooser();
+	// JPanel source_folder_top = new JPanel();
+	// JFrame source_folder_frame = new JFrame();
+	// ============================================
+	
+	public RemoteToRemote_Panel(All_UI aui){
+		
+		this.database_username = aui.database_username;
+		this.aui = aui;
+		this.setLayout(layout);
+		self = this;	
+		//=================================================================	
+		// setting UI of main windows
+	    this.setBounds(this.aui.getBounds());
+	    this.setVisible(true);
+	    
+	    int current_row = 0;    
+		exist_task_name_label = new JLabel("choose exist task",JLabel.CENTER);
+		exist_task_name_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(exist_task_name_label, 0, current_row, 3, 1, c, panel, layout);
+	    exist_task_name_combobox = new JComboBox<String>();
+	    exist_task_name_combobox.setPreferredSize(new Dimension(400, 50));
+	    exist_task_name_combobox.setVisible(false);
+	    exist_task_name_combobox.addItemListener(new ItemListener(){	    	
+			@Override		
+			public void itemStateChanged(ItemEvent e) {
+				select_exist_tasks();
+			}
+		});
+	    add_a_component(exist_task_name_combobox, 3, current_row, 5, 1, c, panel, layout);
+	    edit_task_label = new JLabel("edit mode",JLabel.CENTER);
+	    edit_task_label.setPreferredSize(new Dimension(100, 50));
+	    add_a_component(edit_task_label, 8, current_row, 1, 1, c, panel, layout);
+	    edit_task_comboBox = new JComboBox<String>();
+	    edit_task_comboBox.addItem("create");
+	    edit_task_comboBox.addItem("modify");
+	    edit_task_comboBox.addItem("delete");
+	    edit_task_comboBox.addItemListener(new ItemListener(){
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				try {
+					if (e.getStateChange() == ItemEvent.SELECTED) {
+			 			String mode = (String) e.getItem();
+			 			if(mode.equals("create")) {
+			 				select_create();
+			 			} else if(mode.equals("modify")) {
+			 				select_modify();				
+			 			} else if(mode.equals("delete")){
+			 				select_delete();
+			 			}
+			 		}
+				} catch (Exception error) {
+					error.printStackTrace();
+				}			
+			} 
+		});
+	    edit_task_comboBox.setPreferredSize(new Dimension(100, 50));
+	    add_a_component(edit_task_comboBox, 9, current_row, 1, 1, c, panel, layout);
+	    current_row+=1;
+	      
+		new_task_name_label = new JLabel("name of new task",JLabel.CENTER);
+		new_task_name_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(new_task_name_label, 0, current_row, 3, 1, c,panel, layout);
+	    new_task_name_textfield = new JTextField();
+	    new_task_name_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(new_task_name_textfield, 3, current_row, 5, 1, c,panel, layout);
+	    edit_mv_or_cp_label = new JLabel("move/copy",JLabel.CENTER);
+	    edit_mv_or_cp_label.setPreferredSize(new Dimension(100, 50));
+	    add_a_component(edit_mv_or_cp_label, 8, current_row, 1, 1, c,panel, layout);
+	    edit_mv_or_cp_combobox = new JComboBox<String>();
+	    edit_mv_or_cp_combobox.addItem("copy");
+	    edit_mv_or_cp_combobox.addItem("move"); 
+	    edit_mv_or_cp_combobox.setPreferredSize(new Dimension(100, 50));
+	    add_a_component(edit_mv_or_cp_combobox, 9, current_row, 1, 1,c, panel, layout);
+	    current_row+=1;
+	          
+	    choose_execute_timeing_label = new JLabel("execute_timing",JLabel.CENTER);
+	    choose_execute_timeing_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(choose_execute_timeing_label, 0, current_row, 3, 1, c, panel, layout);
+	    now_button = new JRadioButton("now");
+	    now_button.setHorizontalAlignment(JRadioButton.CENTER);
+	    now_button.setPreferredSize(new Dimension(160, 50));
+	    now_button.addActionListener(new ActionListener() {		
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				set_timing(false);			
+			}
+		});
+	    add_a_component(now_button , 3, current_row, 2, 1, c, panel, layout);
+	    period_button = new JRadioButton("periodical",true);
+	    period_button.setHorizontalAlignment(JRadioButton.CENTER);
+	    period_button.setPreferredSize(new Dimension(160, 50));
+	    period_button.addActionListener(new ActionListener() {		
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				set_timing(true);
+			}
+		});
+	    add_a_component(period_button , 5, current_row, 2, 1, c, panel, layout);
+	    timing_group = new ButtonGroup();
+	    timing_group.add(now_button);
+	    timing_group.add(period_button);	    
+	    force_umount_box = new JCheckBox("force umount");
+	    force_umount_box.setHorizontalAlignment(JCheckBox.CENTER);
+	    force_umount_box.setPreferredSize(new Dimension(160, 50));
+	    add_a_component(force_umount_box , 8, current_row, 2, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    time_setting_label = new JLabel("time setting",JLabel.CENTER);
+	    time_setting_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(time_setting_label, 0, current_row, 3, 1, c, panel, layout); 	
+	    period_label = new JLabel("週期:",JLabel.CENTER);
+	    period_label.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(period_label, 3, current_row, 1, 1, c, panel, layout); 
+	    period_combobox = new JComboBox<String>();
+	    period_combobox.addItem("每月");	
+	    period_combobox.addItem("每週");	
+	    period_combobox.addItem("每日");	     
+	    period_combobox.addItemListener(new ItemListener(){
+			@Override
+			public void itemStateChanged(ItemEvent arg0) {
+				if(period_combobox.isEnabled()) {
+					if(period_combobox.getSelectedIndex()==0) {
+						date_textfield.setVisible(true);
+						weekday_JComboBox.setVisible(false);
+					} else if(period_combobox.getSelectedIndex()==1) {
+						date_textfield.setVisible(false);
+						weekday_JComboBox.setVisible(true);
+					} else {
+						date_textfield.setVisible(false);
+						weekday_JComboBox.setVisible(false);
+					}
+				} else {
+					date_textfield.setVisible(false);
+					weekday_JComboBox.setVisible(false);
+				}			
+			}    	
+	    });
+	    period_combobox.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(period_combobox, 4, current_row, 1, 1,c, panel, layout);   
+	    date_label = new JLabel("日期：",JLabel.CENTER);
+	    date_label.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(date_label, 5, current_row, 1, 1, c,panel, layout);
+	    date_textfield = new JTextField();
+	    date_textfield.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(date_textfield, 6, current_row, 1, 1, c,panel, layout);
+	    weekday_label = new JLabel("星期：",JLabel.CENTER); 
+	    weekday_label.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(weekday_label, 7, current_row, 1, 1,c, panel, layout);
+	    weekday_JComboBox = new JComboBox<String>();	
+	    weekday_JComboBox.addItem("日");	
+	    weekday_JComboBox.addItem("一");	
+	    weekday_JComboBox.addItem("二");	  
+	    weekday_JComboBox.addItem("三");	
+	    weekday_JComboBox.addItem("四");	
+	    weekday_JComboBox.addItem("五");	  
+	    weekday_JComboBox.addItem("六");		
+	    weekday_JComboBox.setPreferredSize(new Dimension(80, 50));
+	    weekday_JComboBox.setVisible(false);
+	    add_a_component(weekday_JComboBox, 8, current_row, 1, 1, c,panel, layout); 
+	    current_row+=1;
+	    
+	    start_hour_label = new JLabel("時:",JLabel.CENTER);
+	    start_hour_label.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(start_hour_label, 3, current_row, 1, 1, c,panel, layout);
+	    start_hour_textfield = new JTextField();
+	    start_hour_textfield.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(start_hour_textfield, 4 , current_row, 1, 1, c,panel, layout);
+	    start_minute_label = new JLabel("分:",JLabel.CENTER);
+	    start_minute_label.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(start_minute_label, 5, current_row, 1, 1, c,panel, layout);
+	    start_minute_textfield = new JTextField();
+	    start_minute_textfield.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(start_minute_textfield, 6, current_row, 1, 1,c, panel, layout);
+	    execute_hour_label = new JLabel("最大執行時間(h):",JLabel.CENTER);
+	    execute_hour_label.setPreferredSize(new Dimension(160, 50));
+	    add_a_component(execute_hour_label, 7, current_row, 2, 1,c, panel, layout);
+	    execute_hour_textfield = new JTextField(String.valueOf(Integer.MAX_VALUE));
+	    execute_hour_textfield.setPreferredSize(new Dimension(80, 50));
+	    add_a_component(execute_hour_textfield, 9, current_row, 1, 1,c, panel, layout);
+	    current_row+=1;
+	    	         
+	    source_label = new JLabel("source",JLabel.CENTER);
+	    source_label.setPreferredSize(new Dimension(450, 50));
+	    add_a_component(source_label, 3, current_row, 5, 1, c, panel, layout);
+	    dest_label = new JLabel("target",JLabel.CENTER);
+	    dest_label.setPreferredSize(new Dimension(450, 50));
+	    add_a_component(dest_label, 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    connection_way_label = new JLabel("connection way",JLabel.CENTER);
+	    connection_way_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(connection_way_label, 0, current_row, 3, 1,c, panel, layout);
+	    source_connection_way_combobox = new JComboBox<String>();
+	    source_connection_way_combobox.addItem("temporary cifs connection");
+	    source_connection_way_combobox.addItem("temporary nfs connection");
+	    source_connection_way_combobox.addItem("localhost/connected remote");
+	    source_connection_way_combobox.addItemListener(new ItemListener() {		
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				try {
+					if (e.getStateChange() == ItemEvent.SELECTED) {
+						// do something with object
+			 			String mode = (String) e.getItem();
+			 			source_connection_enable(mode);
+			 		}
+				} catch (Exception error) {
+					error.printStackTrace();
+				}			
+				
+			}
+		});
+	    source_connection_way_combobox.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_connection_way_combobox, 3, current_row, 5, 1, c, panel, layout);
+	    dest_connection_way_combobox = new JComboBox<String>();
+	    dest_connection_way_combobox.addItem("temporary cifs connection");
+	    dest_connection_way_combobox.addItem("temporary nfs connection");
+	    dest_connection_way_combobox.addItem("localhost/connected remote");
+	    dest_connection_way_combobox.addItemListener(new ItemListener() {		
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				try {
+					if (e.getStateChange() == ItemEvent.SELECTED) {
+						// do something with object
+			 			String mode = (String) e.getItem();
+			 			dest_connection_enable(mode);
+			 		}
+				} catch (Exception error) {
+					error.printStackTrace();
+				}			
+				
+			}
+		});
+	    dest_connection_way_combobox.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_connection_way_combobox, 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    ip_label = new JLabel("ip",JLabel.CENTER);
+	    ip_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(ip_label, 0, current_row, 3, 1, c, panel, layout);		
+	    source_ip_textfield = new JTextField();
+	    source_ip_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_ip_textfield, 3, current_row, 5, 1, c, panel, layout);
+	    dest_ip_textfield = new JTextField();
+	    dest_ip_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_ip_textfield, 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	       
+	    connection_username_label = new JLabel("connection username",JLabel.CENTER);
+	    connection_username_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(connection_username_label, 0, current_row, 3, 1, c, panel, layout);		
+	    source_connection_username_textfield = new JTextField();
+	    source_connection_username_textfield .setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_connection_username_textfield , 3, current_row, 5, 1, c, panel, layout);
+	    dest_connection_username_textfield = new JTextField();
+	    dest_connection_username_textfield .setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_connection_username_textfield , 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    connection_password_label = new JLabel("connection password",JLabel.CENTER);
+	    connection_password_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(connection_password_label, 0, current_row, 3, 1, c, panel, layout);		
+	    source_connection_password_textfield = new JPasswordField();
+	    source_connection_password_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_connection_password_textfield, 3, current_row, 5, 1, c, panel, layout);
+	    dest_connection_password_textfield = new JPasswordField();
+	    dest_connection_password_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_connection_password_textfield, 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    mount_disk_Label = new JLabel("mount_disk",JLabel.CENTER);
+	    mount_disk_Label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(mount_disk_Label, 0, current_row, 3, 1, c, panel, layout);		
+	    source_mount_disk_textfield = new JTextField();
+	    source_mount_disk_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_mount_disk_textfield, 3, current_row, 5, 1, c, panel, layout);
+	    dest_mount_disk_textfield= new JTextField();
+	    dest_mount_disk_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_mount_disk_textfield, 8, current_row, 5, 1, c, panel, layout);
+	    current_row+=1;
+	    
+	    folder_label = new JLabel("mount_folder",JLabel.CENTER);
+	    folder_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(folder_label, 0, current_row, 3, 1, c, panel, layout);		
+	    source_folder_textfield = new JTextField();
+	    source_folder_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_folder_textfield, 3, current_row, 5, 1, c, panel, layout);		
+	    dest_folder_textfield = new JTextField();
+	    dest_folder_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(dest_folder_textfield, 8, current_row, 5, 1, c, panel, layout);
+    	current_row+=1;    
+    	
+    	subfolder_label = new JLabel("folder_to_be_copied",JLabel.CENTER); 
+    	subfolder_label.setPreferredSize(new Dimension(250, 50));
+	    add_a_component(subfolder_label, 0, current_row, 3, 1, c, panel, layout);
+	    source_subfolder_textfield = new JTextField();
+	    source_subfolder_textfield.setPreferredSize(new Dimension(400, 50));
+	    add_a_component(source_subfolder_textfield, 3, current_row, 5, 1, c, panel, layout);		
+	    
+	    import_setting = new JButton("Import");
+	    import_setting.setPreferredSize(new Dimension(150, 50));
+	    import_setting.addActionListener(new ActionListener() {
+			@Override
+ 			public void actionPerformed(ActionEvent arg0) {
+				iui = new Import_UI(self,database_username);
+ 			}
+ 		});
+	    add_a_component(import_setting, 8, current_row, 2, 1,c, panel, layout);
+	    
+	    submit = new JButton("submit");
+	    submit.setPreferredSize(new Dimension(150, 50));
+	    submit.addActionListener(new ActionListener() {
+			@SuppressWarnings("unchecked")
+			@Override
+ 			public void actionPerformed(ActionEvent arg0) {	
+				
+				JSONObject parameters = new JSONObject();
+				String mode = (String) edit_task_comboBox.getSelectedItem();	
+				
+				// check the task name is unique or not
+				if(mode.equals("create")) {					
+					Connection connection = Utils.connect_to_database();		
+					try {
+						Statement stmt = connection.createStatement();				
+						String stmt_string = String.format(
+								"SELECT count(*) FROM tasks "+ 
+								"WHERE username = '%s' and task_name = '%s'",
+						    	 database_username, new_task_name_textfield.getText());					
+						ResultSet rs = stmt.executeQuery(stmt_string);
+						if(rs.next() && rs.getInt(1)>0 && 
+							edit_task_comboBox.getSelectedItem().equals("create")) {
+							Utils.set_and_show_error("The task name has been used.",true);
+							rs.close();
+							stmt.close();
+							connection.close();
+							return;
+						}
+						
+						rs.close();
+						stmt.close();
+						connection.close();
+					} catch (Exception e) {
+						Utils.set_and_show_error("Some error happens, maybe try again later.",true);
+					}
+				}
+					
+				// start setting parameters
+				parameters.put("database_username",database_username);
+				parameters.put("database_password",database_password);
+				if(force_umount_box.isSelected()) {
+					parameters.put("force_umount","true");
+				} else {
+					parameters.put("force_umount","false");
+				}
+				
+				if(mode.equals("create")) {
+					parameters.put("task_name", new_task_name_textfield.getText());
+				} else {
+					parameters.put("task_name", exist_task_name_combobox.getSelectedItem());
+				}
+				
+				if(!mode.equals("delete")) {				
+
+					parameters.put("move_or_copy", edit_mv_or_cp_combobox.getSelectedItem());								
+					if(period_button.isSelected()) {
+						parameters.put("execute_timing", period_button.getText());
+						System.out.println("period:"+period_combobox.getSelectedItem());
+						parameters.put("period", (String) period_combobox.getSelectedItem());
+						if(period_combobox.getSelectedItem().equals("每月")) {
+							parameters.put("日期", date_textfield.getText());
+						} else {
+							parameters.put("日期", "");
+						}
+
+						if(period_combobox.getSelectedItem().equals("每週")) {
+							parameters.put("星期",
+									(String) weekday_JComboBox.getSelectedItem());
+						} else {
+							parameters.put("星期","");
+						}
+						parameters.put("小時", start_hour_textfield.getText());
+						parameters.put("分鐘", start_minute_textfield.getText());
+					} else {
+						parameters.put("execute_timing", now_button.getText());
+					}		
+					
+					if(execute_hour_textfield.getText()!=null) {		
+						double hour = 0;
+						try {
+							hour = Double.valueOf(execute_hour_textfield.getText());
+							if(now_button.isSelected()) {
+								hour = Math.min(Integer.MAX_VALUE, Math.max(hour, 1));
+							} else if(period_combobox.getSelectedItem().equals("每月")) {
+								hour = Math.min(4703.5, Math.max(hour, 1));
+							} else if(period_combobox.getSelectedItem().equals("每週")) {
+								hour = Math.min(167.5, Math.max(hour, 1));
+							} else {
+								hour = Math.min(23.5, Math.max(hour, 1));
+							}
+							parameters.put("timeout", String.valueOf(hour));
+						} catch (Exception e) {
+							// TODO: handle exception
+							Utils.set_and_show_error("The input of execute_hour is not a number.",true);
+							return;
+						}
+					} else {
+						if(period_combobox.getSelectedItem().equals("每月")) {
+							parameters.put("timeout", "4703.5");
+						} else if(period_combobox.getSelectedItem().equals("每週")) {
+							parameters.put("timeout", "167.5");
+						} else {
+							parameters.put("timeout", "23.5");
+						}
+					}
+									 							
+					parameters.put("source_connection_way", source_connection_way_combobox.getSelectedItem());
+					if(source_connection_way_combobox.getSelectedItem().equals("temporary cifs connection")) {
+						parameters.put("source_connection_username", source_connection_username_textfield.getText());
+						if(source_connection_password_textfield.getText()!=null &&
+						   source_connection_password_textfield.getText().length()>0) {
+							parameters.put("encrypted_source_connection_password",
+									Utils.encrypted_by_AES(source_connection_password_textfield.getText()));
+						} else {
+							parameters.put("encrypted_source_connection_password","");
+						}
+						
+						parameters.put("source_ip", source_ip_textfield.getText());
+						parameters.put("source_mount_disk", source_mount_disk_textfield.getText());
+						parameters.put("source_subfolder",source_subfolder_textfield.getText());
+					} else if(source_connection_way_combobox.getSelectedItem().equals("temporary nfs connection")) {
+						parameters.put("source_ip", source_ip_textfield.getText());
+						parameters.put("source_mount_disk", source_mount_disk_textfield.getText());
+						parameters.put("source_subfolder",source_subfolder_textfield.getText());
+					}
+					parameters.put("source_folder",source_folder_textfield.getText());
+					
+					parameters.put("target_connection_way", dest_connection_way_combobox.getSelectedItem());
+					if(dest_connection_way_combobox.getSelectedItem().equals("temporary cifs connection")) {
+						parameters.put("target_connection_username", dest_connection_username_textfield.getText());
+						if( dest_connection_password_textfield.getText()!=null && 
+							dest_connection_password_textfield.getText().length()>0) {
+							parameters.put("encrypted_target_connection_password", 
+									Utils.encrypted_by_AES(dest_connection_password_textfield.getText()));
+						} else {
+							parameters.put("encrypted_target_connection_password", "");
+						}	
+						
+						parameters.put("target_ip", dest_ip_textfield.getText());
+						parameters.put("target_mount_disk", dest_mount_disk_textfield.getText());
+					} else if(dest_connection_way_combobox.getSelectedItem().equals("temporary nfs connection")) {
+						parameters.put("target_ip", dest_ip_textfield.getText());
+						parameters.put("target_mount_disk", dest_mount_disk_textfield.getText());
+					}
+					
+					parameters.put("target_folder",dest_folder_textfield.getText());							
+					String info = Utils.check_format(parameters);
+					if(!info.equals("")) {
+						Utils.set_and_show_error(info,true);
+					} else if(mode.equals("create")){	
+						System.out.println("start to create");
+						if(period_button.isSelected()) {
+							EditTask.create_task_periodical(parameters,true);
+						}  else if (now_button.isSelected()){
+							EditTask.create_task_and_execute_now(parameters,true);
+						}			
+					} else if(mode.equals("modify")){
+						System.out.println("start to modify");
+						if(period_button.isSelected()) {
+							EditTask.modify_task_periodical(parameters,true);
+						} else if (now_button.isSelected()){
+							EditTask.modify_task_and_execute_now( parameters,true);
+						}							
+					} 				
+				} else {
+					parameters.put("task_name", (String)exist_task_name_combobox.getSelectedItem());
+					parameters.put("database_username",database_username);
+					parameters.put("database_password",database_password);
+					System.out.println("start to remove");
+					if(period_button.isSelected()) {
+						EditTask.delete_periodical_task(parameters,true);
+					} else if (now_button.isSelected()){
+						EditTask.delete_once_task(parameters,true);
+					}
+					
+					exist_task_name_combobox.removeItem(parameters.get("task_name"));
+				}
+			}
+	 	 });
+	    add_a_component(submit, 10, current_row, 2, 1, c, panel, layout);
+	    current_row+=1;
+	}
+	
+	//===============================================================
+	/* 	
+	public void select_exist_tasks(ItemEvent e) {
+ 		  if (ItemEvent.SELECTED == e.getStateChange()) {
+			    force_umount_box.setSelected(false);
+				String task_name = (String) e.getItem();
+				if(task_name!=null) {							
+					try {
+	 	 				Connection conn = Utils.connect_to_database();
+	 	 				Statement stmt = conn.createStatement();
+	 	 				String stmt_string = "use "+ Config.DB_database_name+";";
+	 	 				stmt.executeUpdate(stmt_string);
+	 	 				stmt_string = String.format("select * from tasks where "
+	 	 						+ "username='%s' and task_name='%s'"
+	 	 						,database_username,task_name);
+	 	 				//System.out.println(stmt_string);
+	 	 				ResultSet rs = stmt.executeQuery(stmt_string);
+	 	 				if(rs.next()) {	 	 	 					
+	 	 					if(rs.getString("execute_timing").equals("now")) {
+	 	 						now_button.setSelected(true);
+	 	 						set_timing(false);	
+	 	 					} else {
+	 	 						period_button.setSelected(true);
+	 	 						set_timing(true);	
+	 	 						period_combobox.setSelectedItem(rs.getString("period"));
+		 	 					date_textfield.setText(rs.getString("日期"));
+		 	 					weekday_JComboBox.setSelectedItem(rs.getString("星期"));
+		 	 					start_hour_textfield.setText(String.valueOf(rs.getInt("小時")));
+		 	 					start_minute_textfield.setText(String.valueOf(rs.getInt("分鐘")));
+		 	 					edit_mv_or_cp_combobox.setSelectedItem(rs.getString("move_or_copy"));
+	 	 					}
+	 	 					
+	 	 					if(rs.getString("encrypted_computer_password")!=null) {
+	 	 						windows_password_textfield.setText(
+	 	 							Utils.decrypted_by_AES(
+	 	 							rs.getString("encrypted_computer_password")));
+	 	 					} 		
+	 	 					execute_hour_textfield.setText(String.valueOf(rs.getFloat("timeout")));
+	 	 					
+	 	 					source_connection_way_combobox.setSelectedItem(rs.getString("source_connection_way"));
+	 	 					source_ip_textfield.setText(rs.getString("source_ip"));
+	 	 					source_connection_username_textfield.setText(rs.getString("source_connection_username"));
+	 	 					if(rs.getString("encrypted_source_connection_password")!=null) {
+	 	 						source_connection_password_textfield.setText(
+	 	 							Utils.decrypted_by_AES(
+	 	 							rs.getString("encrypted_source_connection_password")));
+	 	 					}
+	 	 					source_mount_disk_textfield.setText(rs.getString("source_mount_disk"));
+	 	 					source_folder_textfield.setText(rs.getString("source_folder"));
+	 	 					source_subfolder_textfield.setText(rs.getString("source_subfolder"));
+	 	 					
+	 	 					dest_connection_way_combobox.setSelectedItem(rs.getString("target_connection_way"));
+	 	 					dest_ip_textfield.setText(rs.getString("target_ip"));
+	 	 					dest_mount_disk_textfield.setText(rs.getString("target_mount_disk"));
+	 	 					dest_connection_username_textfield.setText(rs.getString("target_connection_username"));
+	 	 					if(rs.getString("encrypted_target_connection_password")!=null) {
+	 	 						dest_connection_password_textfield.setText(
+	 	 							Utils.decrypted_by_AES(
+	 	 							rs.getString("encrypted_target_connection_password")));
+	 	 					} 					
+	 	 					dest_folder_textfield.setText(rs.getString("target_folder"));
+	 	 				} 
+					} catch (Exception e2) {
+						e2.printStackTrace();
+					} 							
+				}
+
+	       }
+ 	}*/
+
+ 	public void select_exist_tasks() {
+	    force_umount_box.setSelected(false);
+		String task_name = (String) exist_task_name_combobox.getSelectedItem();
+		if(task_name!=null) {							
+			try {
+ 				Connection conn = Utils.connect_to_database();
+ 				Statement stmt = conn.createStatement();
+ 				String stmt_string = "use "+ Config.DB_database_name+";";
+ 				stmt.executeUpdate(stmt_string);
+ 				stmt_string = String.format("select * from tasks where "
+ 						+ "username='%s' and task_name='%s'"
+ 						,database_username,task_name);
+ 				//System.out.println(stmt_string);
+ 				ResultSet rs = stmt.executeQuery(stmt_string);
+ 				if(rs.next()) {	 	 	 					
+ 					if(rs.getString("execute_timing").equals("now")) {
+ 						now_button.setSelected(true);
+ 						set_timing(false);	
+ 					} else {
+ 						period_button.setSelected(true);
+ 						set_timing(true);	
+ 						period_combobox.setSelectedItem(rs.getString("period"));
+ 	 					date_textfield.setText(rs.getString("日期"));
+ 	 					weekday_JComboBox.setSelectedItem(rs.getString("星期"));
+ 	 					start_hour_textfield.setText(String.valueOf(rs.getInt("小時")));
+ 	 					start_minute_textfield.setText(String.valueOf(rs.getInt("分鐘")));
+ 	 					edit_mv_or_cp_combobox.setSelectedItem(rs.getString("move_or_copy"));
+ 					}
+ 					
+ 					if(rs.getString("encrypted_computer_password")!=null) {
+ 						windows_password_textfield.setText(
+ 							Utils.decrypted_by_AES(
+ 							rs.getString("encrypted_computer_password")));
+ 					} 		
+ 					execute_hour_textfield.setText(String.valueOf(rs.getFloat("timeout")));
+ 					
+ 					source_connection_way_combobox.setSelectedItem(rs.getString("source_connection_way"));
+ 					source_ip_textfield.setText(rs.getString("source_ip"));
+ 					source_connection_username_textfield.setText(rs.getString("source_connection_username"));
+ 					if(rs.getString("encrypted_source_connection_password")!=null) {
+ 						source_connection_password_textfield.setText(
+ 							Utils.decrypted_by_AES(
+ 							rs.getString("encrypted_source_connection_password")));
+ 					}
+ 					source_mount_disk_textfield.setText(rs.getString("source_mount_disk"));
+ 					source_folder_textfield.setText(rs.getString("source_folder"));
+ 					source_subfolder_textfield.setText(rs.getString("source_subfolder"));
+ 					
+ 					dest_connection_way_combobox.setSelectedItem(rs.getString("target_connection_way"));
+ 					dest_ip_textfield.setText(rs.getString("target_ip"));
+ 					dest_mount_disk_textfield.setText(rs.getString("target_mount_disk"));
+ 					dest_connection_username_textfield.setText(rs.getString("target_connection_username"));
+ 					if(rs.getString("encrypted_target_connection_password")!=null) {
+ 						dest_connection_password_textfield.setText(
+ 							Utils.decrypted_by_AES(
+ 							rs.getString("encrypted_target_connection_password")));
+ 					} 					
+ 					dest_folder_textfield.setText(rs.getString("target_folder"));
+ 				} 
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			} 							
+		}       
+	}
+ 	
+	public void set_timing(boolean b) {	
+		if(edit_task_comboBox.getSelectedItem().equals("delete")) {		
+			this.period_combobox.setVisible(false);
+			this.date_textfield.setVisible(false);
+			this.weekday_JComboBox.setVisible(false);					
+			this.start_hour_textfield.setVisible(false);
+			this.start_minute_textfield.setVisible(false);
+			this.execute_hour_textfield.setVisible(false);
+		} else {			
+			this.period_combobox.setVisible(b);
+			if(period_combobox.getSelectedItem().equals("每月")) {
+				this.date_textfield.setVisible(b);
+			} else {
+				this.date_textfield.setVisible(false);
+			}	
+			if(period_combobox.getSelectedItem().equals("每週")) {
+				this.weekday_JComboBox.setVisible(b);
+			} else {
+				this.weekday_JComboBox.setVisible(false);
+			}		
+			this.start_hour_textfield.setVisible(b);
+			this.start_minute_textfield.setVisible(b);			
+		}	
+	}
+	
+	public void select_create() {
+		reset();
+		set_timing(period_button.isSelected());
+		force_umount_box.setVisible(true);
+		new_task_name_textfield.setVisible(true);
+		exist_task_name_combobox.setVisible(false);
+		
+		edit_mv_or_cp_combobox.setVisible(true);
+		windows_password_textfield.setVisible(true);
+		
+		force_umount_box.setVisible(true);
+		new_task_name_textfield.setVisible(true);
+		exist_task_name_combobox.setVisible(false);
+		
+		edit_mv_or_cp_combobox.setVisible(true);
+		execute_hour_textfield.setVisible(true);
+		windows_password_textfield.setVisible(true);
+		
+		now_button.setVisible(true);
+		period_button.setVisible(true);
+		source_connection_way_combobox.setVisible(true);
+		dest_connection_way_combobox.setVisible(true);
+		new_task_name_textfield.setVisible(true);
+		exist_task_name_combobox.setVisible(false);
+
+		source_connection_enable((String)
+				this.source_connection_way_combobox.getSelectedItem());
+		dest_connection_enable((String)
+				this.dest_connection_way_combobox.getSelectedItem());		
+	}
+	
+	public void select_modify() throws Exception{
+		reset();
+		exist_task_select_init();
+		set_timing(period_button.isSelected());
+		
+		force_umount_box.setVisible(true);
+		new_task_name_textfield.setVisible(false);	
+		edit_mv_or_cp_combobox.setVisible(true);
+		exist_task_name_combobox.setVisible(true);
+		execute_hour_textfield.setVisible(true);
+		windows_password_textfield.setVisible(true);	
+		source_connection_way_combobox.setVisible(true);
+		dest_folder_textfield.setVisible(true);
+		
+		now_button.setVisible(true);
+		period_button.setVisible(true);
+		source_connection_way_combobox.setVisible(true);
+		dest_connection_way_combobox.setVisible(true);
+		new_task_name_textfield.setVisible(false);
+		exist_task_name_combobox.setVisible(true);
+		
+		source_connection_enable((String)
+				this.source_connection_way_combobox.getSelectedItem());
+		dest_connection_enable((String)
+				this.dest_connection_way_combobox.getSelectedItem());	
+	}
+
+	public void select_delete() throws Exception{	
+		reset();	
+		exist_task_select_init();
+		set_timing(false);
+			
+		force_umount_box.setVisible(false);
+		new_task_name_textfield.setVisible(false);
+		exist_task_name_combobox.setVisible(true);	
+		start_hour_textfield.setVisible(false);
+		start_minute_textfield.setVisible(false);
+		windows_password_textfield.setVisible(false);
+		dest_folder_textfield.setVisible(false);
+		source_folder_textfield.setVisible(false);
+		edit_mv_or_cp_combobox.setVisible(false);
+		period_combobox.setVisible(false);
+		execute_hour_textfield.setVisible(false);
+		
+		now_button.setVisible(false);
+		period_button.setVisible(false);
+		source_connection_way_combobox.setVisible(false);
+		dest_connection_way_combobox.setVisible(false);
+		new_task_name_textfield.setVisible(false);
+		exist_task_name_combobox.setVisible(true);
+		
+		source_connection_enable((String)
+				this.source_connection_way_combobox.getSelectedItem());
+		dest_connection_enable((String)
+				this.dest_connection_way_combobox.getSelectedItem());
+	}
+	
+	public void reset() {
+		old_task_name = "";
+		force_umount_box.setSelected(false);
+		new_task_name_textfield.setText("");
+		exist_task_name_combobox.removeAllItems();
+		exist_task_name_combobox.setSelectedItem(null);
+		windows_password_textfield.setText("");
+		
+		start_hour_textfield.setText("");
+		start_minute_textfield.setText("");
+	
+		source_ip_textfield.setText("");
+		dest_ip_textfield.setText("");
+		source_connection_username_textfield.setText("");
+		dest_connection_username_textfield.setText("");
+		source_mount_disk_textfield.setText("");
+		dest_mount_disk_textfield.setText("");
+		source_connection_password_textfield.setText("");
+		dest_connection_password_textfield.setText("");
+		source_folder_textfield.setText("");
+		dest_folder_textfield.setText("");
+		source_subfolder_textfield.setText("");	
+		
+		period_combobox.setSelectedIndex(0);
+	}
+
+	//================================================================
+	
+	public void source_connection_enable(String e) {
+		if(edit_task_comboBox.getSelectedItem().equals("delete")) {
+			source_ip_textfield.setVisible(false);
+			source_connection_username_textfield.setVisible(false);
+			source_connection_password_textfield.setVisible(false);
+			source_mount_disk_textfield.setVisible(false);
+			source_folder_textfield.setVisible(false);
+			source_subfolder_textfield.setVisible(false);
+		} else {
+			if(e.equals("temporary cifs connection")) {
+				source_ip_textfield.setVisible(true);
+				source_connection_username_textfield.setVisible(true);
+				source_connection_password_textfield.setVisible(true);
+				source_mount_disk_textfield.setVisible(true);
+				source_subfolder_textfield.setVisible(true);
+			} else if(e.equals("temporary nfs connection")){
+				source_ip_textfield.setVisible(true);
+				source_connection_username_textfield.setVisible(false);
+				source_connection_password_textfield.setVisible(false);
+				source_mount_disk_textfield.setVisible(true);
+				source_subfolder_textfield.setVisible(true);
+			} else {
+				source_ip_textfield.setVisible(false);
+				source_connection_username_textfield.setVisible(false);
+				source_connection_password_textfield.setVisible(false);
+				source_mount_disk_textfield.setVisible(false);
+				source_subfolder_textfield.setVisible(false);
+			}
+			source_folder_textfield.setVisible(true);
+		}		
+	}
+	
+	public void dest_connection_enable(String e) {
+		if(edit_task_comboBox.getSelectedItem().equals("delete")) {
+			dest_ip_textfield.setVisible(false);
+			dest_connection_username_textfield.setVisible(false);
+			dest_connection_password_textfield.setVisible(false);
+			dest_mount_disk_textfield.setVisible(false);	
+			dest_folder_textfield.setVisible(false);
+		} else {
+			if(e.equals("temporary cifs connection")) {
+				dest_ip_textfield.setVisible(true);
+				dest_connection_username_textfield.setVisible(true);
+				dest_connection_password_textfield.setVisible(true);
+				dest_mount_disk_textfield.setVisible(true);
+			} else if(e.equals("temporary nfs connection")){
+				dest_ip_textfield.setVisible(true);
+				dest_connection_username_textfield.setVisible(false);
+				dest_connection_password_textfield.setVisible(false);
+				dest_mount_disk_textfield.setVisible(true);
+			} else {
+				dest_ip_textfield.setVisible(false);
+				dest_connection_username_textfield.setVisible(false);
+				dest_connection_password_textfield.setVisible(false);
+				dest_mount_disk_textfield.setVisible(false);
+			}
+			dest_folder_textfield.setVisible(true);
+		}		
+	}
+	
+	//================================================================
+	public static void add_a_component(Component comp,int gridx, 
+			int gridy, int gridwidth, int gridheight, 
+			GridBagConstraints c,Container top, GridBagLayout gridbag) {
+	    
+        c.gridx = gridx;
+        c.gridy = gridy;
+        c.gridwidth = gridwidth;
+        c.gridheight = gridheight;
+        c.weightx = 5;
+        c.weighty = 5;
+        c.fill = GridBagConstraints.NONE;
+        c.anchor = GridBagConstraints.CENTER;
+        gridbag.setConstraints(comp, c);
+        comp.setVisible(true);
+        top.add(comp); 
+	}
+	
+	public void exist_task_select_init() {
+		try {
+		    Connection conn = Utils.connect_to_database();
+			Statement stmt = conn.createStatement();
+			String stmt_string = "use "+ Config.DB_database_name+";";
+			stmt.executeUpdate(stmt_string);
+			stmt_string = String.format("select task_name from tasks where "
+					+ "username='%s'", database_username);
+			ResultSet rs = stmt.executeQuery(stmt_string);
+			
+			File current_working_space = new File(App.class.getProtectionDomain()
+					.getCodeSource().getLocation().toURI()).getParentFile();
+			String task_name = "";
+			exist_task_name_combobox.removeAllItems();
+			
+			while(rs.next()) {
+				task_name = rs.getString("task_name");
+				File f = new File(current_working_space,task_name);
+				if(f.exists() && All_UI.check_whether_a_task(f)) {
+					exist_task_name_combobox.addItem(task_name);
+				}
+			}	
+			
+			if(exist_task_name_combobox.getItemCount()>0) {
+				exist_task_name_combobox.setSelectedIndex(0);
+				select_exist_tasks();
+			}
+			
+			rs.close();
+			stmt.close();
+			conn.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}	
+	}
+}
